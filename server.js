@@ -4,6 +4,33 @@ const db = new Sequelize(process.env.DATABASE_URL || 'postgres://localhost/fashi
 const express = require('express');
 const app = express();
 
+//////////////////////////
+
+app.get('/api/brands', async(req, res, next) => {
+  try {
+    res.send(await Brand.findAll({
+      include: {
+        model: Clothing,
+        as: 'children',
+      }
+    }));
+  }
+  catch (err) {
+    next(err)
+  }
+});
+
+app.get('/api/clothing', async(req, res, next) => {
+  try {
+    res.send(await Clothing.findAll());
+  }
+  catch (err) {
+    next(err)
+  }
+});
+
+//////////////////////////
+
 const Brand = db.define('brand', {
   name: {
     type: STRING,
@@ -32,35 +59,35 @@ const Clothing = db.define('clothing', {
   },
   price: {
     type: INTEGER,
-    allowNull: false,
+    allowNull: true,
   }
 })
 
 Clothing.belongsTo(Brand, { as: 'parent' });
 Brand.hasMany(Clothing, { as: 'children', foreignKey: 'parentId'})
 
-/////////////////////////////
+//////////////////////////
 
 const syncAndSeed = async() => {
   await db.sync({ force: true });
   const [undercover, supreme, uniqlo, margiela, tee, jacket, pants, shoes] = await Promise.all([
-    Brand.create({name: undercover, brand_type: 'HIGH FASHION'}),
-    Brand.create({name: supreme, brand_type: 'STREETWEAR'}),
-    Brand.create({name: uniqlo, brand_type: 'FAST FASHION'}),
-    Brand.create({name: margiela, brand_type: 'HIGH FASHION'}),
-    Clothing.create({name: tee, size: 'M'}),
-    Clothing.create({name: jacket, size: 'XL'}),
-    Clothing.create({name: pants, size: 'S'}),
-    Clothing.create({name: shoes, size: 'M'}),
+    Brand.create({name: 'undercover', brand_type: 'HIGH FASHION'}),
+    Brand.create({name: 'supreme', brand_type: 'STREETWEAR'}),
+    Brand.create({name: 'uniqlo', brand_type: 'FAST FASHION'}),
+    Brand.create({name: 'margiela', brand_type: 'HIGH FASHION'}),
+    Clothing.create({name: 'tee', size: 'M', price: 1200}),
+    Clothing.create({name: 'jacket', size: 'XL'}),
+    Clothing.create({name: 'pants', size: 'S', price: 60}),
+    Clothing.create({name: 'shoes', size: 'M'}),
   ])
 
-  undercover.parentId = tee.id;
+  tee.parentId = undercover.id;
   await undercover.save();
-  supreme.parentId = jacket.id; 
+  jacket.parentId = supreme.id; 
   await supreme.save();
-  uniqlo.parentId = pants.id;
+  pants.parentId = uniqlo.id;
   await uniqlo.save();
-  margiela.parentId = shoes.id;
+  shoes.parentId = margiela.id;
   await margiela.save();
 
 }
@@ -71,7 +98,7 @@ const init = async() => {
     await db.authenticate();
     await syncAndSeed();
     const port = process.env.PORT || 3000;
-    app.listen(port, () => console.log(`listening on port ${PORT}`));
+    app.listen(port, () => console.log(`listening on port ${port}`));
   }
   catch (err)  {
     console.log(err);
